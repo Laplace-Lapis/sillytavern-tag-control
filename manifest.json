@@ -1,0 +1,10 @@
+{
+    "display_name": "Extensions Tag Control",
+    "author": "Laplace-Lapis",
+    "version": "1.0.0",
+    "js": "index.js",
+    "css": "styles.css",
+    "loading_order": 200,
+    "homePage": "https://github.com/Laplace-Lapis/sillytavern-tag-control",
+    "auto_update": true
+}

@@ -1,0 +1,63 @@
+<div class="tag-control-editor">
+    <h3 data-i18n="Edit Rule">Edit Rule</h3>
+
+    <div class="tag-control-editor-field">
+        <label for="rule-name" data-i18n="Name">Name</label>
+        <input id="rule-name" type="text" class="text_pole" placeholder="Rule name" autocomplete="off">
+    </div>
+
+    <div class="tag-control-editor-field">
+        <label for="rule-extension" data-i18n="Extension">Extension</label>
+        <select id="rule-extension" class="text_pole"></select>
+    </div>
+
+    <div class="tag-control-editor-field">
+        <label data-i18n="Whitelist Tags">Whitelist Tags</label>
+        <small class="tag-control-hint" data-i18n="Rule activates if character has ANY of these tags. Leave empty to skip whitelist check.">
+            Rule activates if character has ANY of these tags. Leave empty to skip whitelist check.
+        </small>
+        <select id="rule-whitelist-select" class="tag-control-tag-select" multiple></select>
+    </div>
+
+    <div class="tag-control-editor-field">
+        <label data-i18n="Blacklist Tags">Blacklist Tags</label>
+        <small class="tag-control-hint" data-i18n="Rule is blocked if character has ANY of these tags. Blacklist takes priority over whitelist.">
+            Rule is blocked if character has ANY of these tags. Blacklist takes priority over whitelist.
+        </small>
+        <select id="rule-blacklist-select" class="tag-control-tag-select" multiple></select>
+    </div>
+
+    <div class="tag-control-editor-field">
+        <label data-i18n="Parameters">Parameters</label>
+        <label class="checkbox_label" for="rule-param-enabled">
+            <input id="rule-param-enabled" type="checkbox">
+            <span data-i18n="Enable extension">Enable extension</span>
+        </label>
+    </div>
+
+    <div class="tag-control-editor-field">
+        <label for="rule-param-preset" data-i18n="Preset">Preset</label>
+        <small class="tag-control-hint" data-i18n="Preset to activate when rule fires. Only available when extension is enabled.">
+            Preset to activate when rule fires. Only available when extension is enabled.
+        </small>
+        <select id="rule-param-preset" class="text_pole"></select>
+    </div>
+
+    <div class="tag-control-editor-field" id="rule-chat-style-row" style="display:none">
+        <label for="rule-param-chat-style" data-i18n="Chat Style">Chat Style</label>
+        <small class="tag-control-hint" data-i18n="Chat display style to apply when rule fires.">
+            Chat display style to apply when rule fires.
+        </small>
+        <select id="rule-param-chat-style" class="text_pole">
+            <option value="">— keep current —</option>
+            <option value="0">Flat</option>
+            <option value="1">Bubble</option>
+            <option value="2">Document</option>
+            <option value="3">Echo</option>
+            <option value="4">Whisper</option>
+            <option value="5">Hush</option>
+            <option value="6">Ripple</option>
+            <option value="7">Tide</option>
+        </select>
+    </div>
+</div>
