@@ -1,0 +1,38 @@
+# Tag Control: Manage other extensions via tags
+
+This is a meta extension that manages other extensions via rules, that operate on tags white- and blacklists.
+Currently in the out-of-the-box SillyTavern each extension needs to be managed manually or via STScript. This extensions instead allows to create rules, that operate on currently selected character tags and automatically adjust managed extensions setting on character switch or tag change.
+
+## What are rules?
+
+Each rule consists of:
+- ID of extension being managed: one rule = one extension. If multiple extensions need to be changed by the same tag, you would neeed to create multiple rules.
+- Tag whitelist: for rule to apply character should have at least one tag from this list. Ignored, if empty.
+- Tag blacklist: for rule to apply character should not have any tag from this list. Ignored, if empty.
+- **IMPORTANT**: if both whitelist and blacklist are empty, rule would not be applied at all.
+- Desired extension settings: currently supports enabled/disabled flag and target preset for the managed extension in general. See below for each specific extension's settings.
+
+## When and How are rules applied?
+
+When characters switch occurs (CHAT_CHANGED event), this extension goes from top to bottom through all rules and determines final target settings based on character tags. Rules at the end of the list override rules at the beginning, so you can have more generic rule at the start and override them with specific ones at the end.
+After target settings are determined, extension applies to the managed extension one-by-one, guarantying that each managed extension would be updated no more than once.
+
+## Which extensions are managed?
+
+Currently (at 1.0.X), following extensions can be managed:
+- Built-in RegEx extension: selected preset can be changed
+- [Moonlit Echoes Theme](https://github.com/RivelleDays/SillyTavern-MoonlitEchoesTheme): can be enabled/disabled and current chat style can be changed among default ones and theme-specific ones (e.g. Flat/Bubble/Tide/Whisper/etc)
+- [NoAss](https://gitgud.io/Monblant/noass): can be enabled/disabled and current preset can be changed.
+- [CharacterIcons](https://gitgud.io/Monblant/sillytavern-charactericons"): can be enabled/disabled and current preset can be changed.
+
+## Security guarantees
+
+This extension only operates client-side by triggering events and/or modifying DOM elements (e.g. checking/unckeing "enabled" checkbox in Extensions UI), when no programmatic controls are provided, related to the managed extensions.  No calls should be done to any external APIs, and no modifications should be done to the outgoing or incoming messages.
+
+## How to install
+
+Use this URL with the extension installer: `https://github.com/Laplace-Lapis/sillytavern-tag-control
+
+## License
+
+AGPLv3

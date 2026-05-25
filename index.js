@@ -27,6 +27,7 @@ const MANAGED_EXTENSIONS = {
     noass: {
         displayName: 'NoAss',
         manifestKey: 'noass',
+        hasEnabledParam: true,
         getSets() {
             return (extensionSettings.NoAss?.sets ?? []).map(s => s.name);
         },
@@ -44,6 +45,7 @@ const MANAGED_EXTENSIONS = {
     charactericons: {
         displayName: 'CharacterIcons',
         manifestKey: 'sillytavern-charactericons',
+        hasEnabledParam: true,
         getSets() {
             return (extensionSettings.CharacterIcons?.sets ?? []).map(s => s.name);
         },
@@ -61,6 +63,7 @@ const MANAGED_EXTENSIONS = {
     moonlit: {
         displayName: 'Moonlit Echoes Theme',
         manifestKey: 'SillyTavern-MoonlitEchoesTheme',
+        hasEnabledParam: true,
         getSets() {
             // Moonlit stores presets as an object { [name]: settings }, not an array
             return Object.keys(extensionSettings.SillyTavernMoonlitEchoesTheme?.presets ?? {});
@@ -90,6 +93,25 @@ const MANAGED_EXTENSIONS = {
                     chatDisplay.dispatchEvent(new Event('change'));
                 }
             }
+        },
+    },
+    regex: {
+        displayName: 'Regex',
+        manifestKey: 'regex',
+        hasEnabledParam: false,
+        getSets() {
+            return (extensionSettings.regex_presets ?? []).map(p => p.name);
+        },
+        async apply(params) {
+            if (!params.active_set) return;
+            const preset = (extensionSettings.regex_presets ?? [])
+                .find(p => p.name === params.active_set);
+            if (!preset) return;
+            const select = document.getElementById('regex_presets');
+            if (!select || select.value === preset.id) return;
+            select.value = preset.id;
+            // fromSlashCommand: true skips the unsaved-changes dialog in RegexPresetManager
+            select.dispatchEvent(new CustomEvent('change', { detail: { fromSlashCommand: true } }));
         },
     },
 };
@@ -128,10 +150,16 @@ function ruleApplies(rule, currentTagIds) {
 async function applyRules() {
     if (!extensionSettings[EXT_NAME].is_enabled) return;
     const currentTagIds = getCurrentTagIds();
+
+    const pendingByExtension = new Map();
     for (const rule of extensionSettings[EXT_NAME].rules) {
         if (ruleApplies(rule, currentTagIds)) {
-            await MANAGED_EXTENSIONS[rule.extensionId]?.apply(rule.parameters);
+            pendingByExtension.set(rule.extensionId, rule.parameters);
         }
+    }
+
+    for (const [extensionId, params] of pendingByExtension) {
+        await MANAGED_EXTENSIONS[extensionId]?.apply(params);
     }
 }
 
@@ -252,7 +280,9 @@ async function openRuleEditor(ruleId) {
     }
 
     function syncPresetEnabled() {
-        presetSel.prop('disabled', !enabledChk.prop('checked'));
+        const extId = extSelect.val();
+        const hasEnabled = MANAGED_EXTENSIONS[extId]?.hasEnabledParam !== false;
+        presetSel.prop('disabled', hasEnabled && !enabledChk.prop('checked'));
     }
 
     // Chat style field — only shown when the moonlit extension is selected
@@ -263,12 +293,21 @@ async function openRuleEditor(ruleId) {
         chatStyleRow.toggle(extId === 'moonlit');
     }
 
+    // Enabled row — hidden for extensions that don't support an enable/disable toggle
+    const enabledRow = template.find('#rule-enabled-row');
+
+    function syncEnabledVisibility(extId) {
+        enabledRow.toggle(MANAGED_EXTENSIONS[extId]?.hasEnabledParam !== false);
+    }
+
     updatePresetOptions(extSelect.val());
     syncPresetEnabled();
     syncChatStyleVisibility(extSelect.val());
+    syncEnabledVisibility(extSelect.val());
     extSelect.on('change', function() {
         updatePresetOptions($(this).val());
         syncChatStyleVisibility($(this).val());
+        syncEnabledVisibility($(this).val());
     });
     enabledChk.on('change', syncPresetEnabled);
 

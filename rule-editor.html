@@ -12,7 +12,7 @@
     </div>
 
     <div class="tag-control-editor-field">
-        <label data-i18n="Whitelist Tags">Whitelist Tags</label>
+        <label for="rule-whitelist-select" data-i18n="Whitelist Tags">Whitelist Tags</label>
         <small class="tag-control-hint" data-i18n="Rule activates if character has ANY of these tags. Leave empty to skip whitelist check.">
             Rule activates if character has ANY of these tags. Leave empty to skip whitelist check.
         </small>
@@ -20,15 +20,15 @@
     </div>
 
     <div class="tag-control-editor-field">
-        <label data-i18n="Blacklist Tags">Blacklist Tags</label>
+        <label for="rule-blacklist-select" data-i18n="Blacklist Tags">Blacklist Tags</label>
         <small class="tag-control-hint" data-i18n="Rule is blocked if character has ANY of these tags. Blacklist takes priority over whitelist.">
             Rule is blocked if character has ANY of these tags. Blacklist takes priority over whitelist.
         </small>
         <select id="rule-blacklist-select" class="tag-control-tag-select" multiple></select>
     </div>
 
-    <div class="tag-control-editor-field">
-        <label data-i18n="Parameters">Parameters</label>
+    <div class="tag-control-editor-field" id="rule-enabled-row">
+        <span class="tag-control-field-label" data-i18n="Parameters">Parameters</span>
         <label class="checkbox_label" for="rule-param-enabled">
             <input id="rule-param-enabled" type="checkbox">
             <span data-i18n="Enable extension">Enable extension</span>

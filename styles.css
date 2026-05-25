@@ -60,7 +60,8 @@
     gap: 4px;
 }
 
-.tag-control-editor-field > label:first-child {
+.tag-control-editor-field > label:first-child,
+.tag-control-editor-field > .tag-control-field-label {
     font-weight: bold;
 }
 
