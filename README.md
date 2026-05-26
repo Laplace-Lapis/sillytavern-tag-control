@@ -19,7 +19,7 @@ After target settings are determined, extension applies to the managed extension
 
 ## Which extensions are managed?
 
-Currently (at 1.0.X), following extensions can be managed:
+Currently (at 1.1.X), following extensions can be managed:
 - Built-in RegEx extension: selected preset can be changed
 - [Moonlit Echoes Theme](https://github.com/RivelleDays/SillyTavern-MoonlitEchoesTheme): can be enabled/disabled and current chat style can be changed among default ones and theme-specific ones (e.g. Flat/Bubble/Tide/Whisper/etc)
 - [NoAss](https://gitgud.io/Monblant/noass): can be enabled/disabled and current preset can be changed.
@@ -36,3 +36,7 @@ Use this URL with the extension installer: `https://github.com/Laplace-Lapis/sil
 ## License
 
 AGPLv3
+
+## Changelog
+
+1.1 - Added support for drag and drop to reorder rules

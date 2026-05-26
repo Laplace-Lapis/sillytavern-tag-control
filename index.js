@@ -1,3 +1,5 @@
+import { getSortableDelay } from '../../../utils.js';
+
 const context = SillyTavern.getContext();
 const {
     eventSource,
@@ -185,6 +187,10 @@ function renderRuleList() {
         row.className = 'tag-control-rule';
         row.dataset.id = rule.id;
 
+        const handle = document.createElement('span');
+        handle.className = 'drag-handle menu-handle';
+        handle.innerHTML = '&#9776;';
+
         const nameSpan = document.createElement('span');
         nameSpan.className = 'tag-control-rule-name';
         nameSpan.textContent = rule.name || '(unnamed)';
@@ -207,12 +213,31 @@ function renderRuleList() {
         delBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
         delBtn.addEventListener('click', () => deleteRule(rule.id));
 
+        row.appendChild(handle);
         row.appendChild(nameSpan);
         row.appendChild(extSpan);
         row.appendChild(editBtn);
         row.appendChild(delBtn);
         container.appendChild(row);
     }
+}
+
+function initSortable() {
+    $('#tag-control-rules-list').sortable({
+        delay: getSortableDelay(),
+        handle: '.drag-handle',
+        stop: function () {
+            const rules = extensionSettings[EXT_NAME].rules;
+            const newRules = [];
+            $('#tag-control-rules-list').children('.tag-control-rule').each(function () {
+                const id = $(this).data('id');
+                const rule = rules.find(r => r.id === id);
+                if (rule) newRules.push(rule);
+            });
+            extensionSettings[EXT_NAME].rules = newRules;
+            saveSettingsDebounced();
+        },
+    });
 }
 
 async function deleteRule(id) {
@@ -394,6 +419,7 @@ jQuery(async () => {
     $('#tag-control-add-rule').on('click', () => openRuleEditor(null));
 
     renderRuleList();
+    initSortable();
 
     eventSource.makeLast(event_types.CHAT_CHANGED, applyRules);
 
