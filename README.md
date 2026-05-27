@@ -14,8 +14,10 @@ Each rule consists of:
 
 ## When and How are rules applied?
 
-When characters switch occurs (CHAT_CHANGED event), this extension goes from top to bottom through all rules and determines final target settings based on character tags. Rules at the end of the list override rules at the beginning, so you can have more generic rule at the start and override them with specific ones at the end.
+When characters switch occurs (CHAT_CHANGED event with `character_id` being different from the previous one), this extension goes from top to bottom through all rules and determines final target settings based on character tags. Rules at the end of the list override rules at the beginning, so you can have more generic rule at the start and override them with specific ones at the end.
 After target settings are determined, extension applies to the managed extension one-by-one, guarantying that each managed extension would be updated no more than once.
+
+You can also manually trigger rules re-application by clicking `Reapply rules` button in the extension settings.
 
 ## Which extensions are managed?
 
@@ -39,4 +41,8 @@ AGPLv3
 
 ## Changelog
 
-1.1 - Added support for drag and drop to reorder rules
+### 1.2.0  
+- Added `Reapply rules` button to settings to be able to re-trigger rules, if you have edited tags on the current character (as tags edit does not emit any events);
+- Fixed conflict with RegExt extension manual preset change, which caused rules to be re-applied. Now rules are not being re-applied until you switch to different character.
+### 1.1.0 
+- Added support for drag and drop to reorder rules

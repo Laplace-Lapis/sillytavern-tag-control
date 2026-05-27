@@ -149,8 +149,19 @@ function ruleApplies(rule, currentTagIds) {
     return true;
 }
 
+// Tracks the last characterId seen by applyRules so we can distinguish an actual
+// character switch (CHAT_CHANGED with a new character) from an in-place reload
+// (e.g. triggered by the regex extension after a preset change, same character).
+let _applyRulesHasRun = false;
+/** @type {number|undefined} */
+let _lastAppliedCharacterId;
+
 async function applyRules() {
     if (!extensionSettings[EXT_NAME].is_enabled) return;
+    const { characterId } = SillyTavern.getContext();
+    if (_applyRulesHasRun && characterId === _lastAppliedCharacterId) return;
+    _applyRulesHasRun = true;
+    _lastAppliedCharacterId = characterId;
     const currentTagIds = getCurrentTagIds();
 
     const pendingByExtension = new Map();
@@ -417,6 +428,10 @@ jQuery(async () => {
         });
 
     $('#tag-control-add-rule').on('click', () => openRuleEditor(null));
+    $('#tag-control-reapply-rules').on('click', () => {
+        _applyRulesHasRun = false;
+        applyRules();
+    });
 
     renderRuleList();
     initSortable();
