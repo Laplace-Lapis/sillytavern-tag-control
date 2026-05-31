@@ -162,6 +162,7 @@ async function applyRules() {
     if (_applyRulesHasRun && characterId === _lastAppliedCharacterId) return;
     _applyRulesHasRun = true;
     _lastAppliedCharacterId = characterId;
+    if (characterId === undefined) return; // No character selected (e.g. recent chats page)
     const currentTagIds = getCurrentTagIds();
 
     const pendingByExtension = new Map();

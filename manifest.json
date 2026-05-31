@@ -1,7 +1,7 @@
 {
     "display_name": "Extensions Tag Control",
     "author": "Laplace-Lapis",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "js": "index.js",
     "css": "styles.css",
     "loading_order": 200,
