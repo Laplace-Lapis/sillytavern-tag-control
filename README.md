@@ -41,8 +41,12 @@ AGPLv3
 
 ## Changelog
 
+### 2.0.0
+- **Breaking:** settings storage key renamed `SillyTavern-TagControl` → `tagControl` as part of an
+  internal cleanup pass to unify code style across my extensions. 1.x.x rules are not migrated — recreate them after upgrading. 
+- Internal cleanup pass to unify all my extensions' code style.
 ### 1.2.1  
-- Added guard to avoid rules applying before character is selected (on recent chats screen)
+- Added guard to avoid rules applying before the character is selected (on recent chats screen)
 ### 1.2.0  
 - Added `Reapply rules` button to settings to be able to re-trigger rules, if you have edited tags on the current character (as tags edit does not emit any events);
 - Fixed conflict with RegExt extension manual preset change, which caused rules to be re-applied. Now rules are not being re-applied until you switch to different character.

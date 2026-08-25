@@ -1,21 +1,7 @@
+// getSortableDelay has no SillyTavern.getContext() equivalent
 import { getSortableDelay } from '../../../utils.js';
 
-const context = SillyTavern.getContext();
-const {
-    eventSource,
-    event_types,
-    extensionSettings,
-    saveSettingsDebounced,
-    renderExtensionTemplateAsync,
-    callPopup,
-    uuidv4,
-    getExtensionManifest,
-    Popup,
-    POPUP_TYPE,
-    POPUP_RESULT,
-} = context;
-
-const EXT_NAME = 'SillyTavern-TagControl';
+const MODULE_NAME = 'tagControl';
 const EXT_PATH = 'third-party/sillytavern-tag-control';
 
 const DEFAULT_SETTINGS = {
@@ -31,9 +17,11 @@ const MANAGED_EXTENSIONS = {
         manifestKey: 'noass',
         hasEnabledParam: true,
         getSets() {
+            const { extensionSettings } = SillyTavern.getContext();
             return (extensionSettings.NoAss?.sets ?? []).map(s => s.name);
         },
         async apply(params) {
+            const { extensionSettings, eventSource } = SillyTavern.getContext();
             if (!extensionSettings.NoAss) return;
             if (params.enabled) {
                 const reloadFlag = { value: false };
@@ -49,9 +37,11 @@ const MANAGED_EXTENSIONS = {
         manifestKey: 'sillytavern-charactericons',
         hasEnabledParam: true,
         getSets() {
+            const { extensionSettings } = SillyTavern.getContext();
             return (extensionSettings.CharacterIcons?.sets ?? []).map(s => s.name);
         },
         async apply(params) {
+            const { extensionSettings, eventSource } = SillyTavern.getContext();
             if (!extensionSettings.CharacterIcons) return;
             if (params.enabled) {
                 const reloadFlag = { value: false };
@@ -67,10 +57,12 @@ const MANAGED_EXTENSIONS = {
         manifestKey: 'SillyTavern-MoonlitEchoesTheme',
         hasEnabledParam: true,
         getSets() {
+            const { extensionSettings } = SillyTavern.getContext();
             // Moonlit stores presets as an object { [name]: settings }, not an array
             return Object.keys(extensionSettings.SillyTavernMoonlitEchoesTheme?.presets ?? {});
         },
         async apply(params) {
+            const { extensionSettings } = SillyTavern.getContext();
             if (!extensionSettings.SillyTavernMoonlitEchoesTheme) return;
 
             // Enable/disable via Moonlit's own checkbox (triggers CSS injection + slash command init)
@@ -102,10 +94,12 @@ const MANAGED_EXTENSIONS = {
         manifestKey: 'regex',
         hasEnabledParam: false,
         getSets() {
+            const { extensionSettings } = SillyTavern.getContext();
             return (extensionSettings.regex_presets ?? []).map(p => p.name);
         },
         async apply(params) {
             if (!params.active_set) return;
+            const { extensionSettings } = SillyTavern.getContext();
             const preset = (extensionSettings.regex_presets ?? [])
                 .find(p => p.name === params.active_set);
             if (!preset) return;
@@ -119,22 +113,27 @@ const MANAGED_EXTENSIONS = {
 };
 
 function getInstalledManagedExtensions() {
+    const { getExtensionManifest } = SillyTavern.getContext();
     return Object.entries(MANAGED_EXTENSIONS)
         .filter(([, ext]) => !!getExtensionManifest(ext.manifestKey))
         .map(([id, ext]) => ({ id, ...ext }));
 }
 
-function checkSettings() {
-    if (!extensionSettings[EXT_NAME]) {
-        extensionSettings[EXT_NAME] = { ...DEFAULT_SETTINGS, rules: [] };
-    }
-    extensionSettings[EXT_NAME].is_enabled ??= DEFAULT_SETTINGS.is_enabled;
-    extensionSettings[EXT_NAME].rules ??= [];
+function ensureSettings() {
+    const { extensionSettings, saveSettingsDebounced } = SillyTavern.getContext();
+    extensionSettings[MODULE_NAME] ??= { ...DEFAULT_SETTINGS, rules: [] };
+    extensionSettings[MODULE_NAME].is_enabled ??= DEFAULT_SETTINGS.is_enabled;
+    extensionSettings[MODULE_NAME].rules ??= [];
     saveSettingsDebounced();
+    return extensionSettings[MODULE_NAME];
+}
+
+function getSettings() {
+    const { extensionSettings } = SillyTavern.getContext();
+    return extensionSettings[MODULE_NAME];
 }
 
 function getCurrentTagIds() {
-    // Call getContext() fresh to get the current characterId (module-level context is a snapshot)
     const { characterId, characters, tagMap } = SillyTavern.getContext();
     const character = characters[characterId];
     if (!character) return [];
@@ -152,21 +151,21 @@ function ruleApplies(rule, currentTagIds) {
 // Tracks the last characterId seen by applyRules so we can distinguish an actual
 // character switch (CHAT_CHANGED with a new character) from an in-place reload
 // (e.g. triggered by the regex extension after a preset change, same character).
-let _applyRulesHasRun = false;
+let applyRulesHasRun = false;
 /** @type {number|undefined} */
-let _lastAppliedCharacterId;
+let lastAppliedCharacterId;
 
 async function applyRules() {
-    if (!extensionSettings[EXT_NAME].is_enabled) return;
+    if (!getSettings().is_enabled) return;
     const { characterId } = SillyTavern.getContext();
-    if (_applyRulesHasRun && characterId === _lastAppliedCharacterId) return;
-    _applyRulesHasRun = true;
-    _lastAppliedCharacterId = characterId;
+    if (applyRulesHasRun && characterId === lastAppliedCharacterId) return;
+    applyRulesHasRun = true;
+    lastAppliedCharacterId = characterId;
     if (characterId === undefined) return; // No character selected (e.g. recent chats page)
     const currentTagIds = getCurrentTagIds();
 
     const pendingByExtension = new Map();
-    for (const rule of extensionSettings[EXT_NAME].rules) {
+    for (const rule of getSettings().rules) {
         if (ruleApplies(rule, currentTagIds)) {
             pendingByExtension.set(rule.extensionId, rule.parameters);
         }
@@ -179,59 +178,40 @@ async function applyRules() {
 
 // --- Rule list UI ---
 
-function renderRuleList() {
+async function renderRuleList() {
+    const { t, renderExtensionTemplateAsync } = SillyTavern.getContext();
     const container = document.getElementById('tag-control-rules-list');
+    const empty = document.getElementById('tag-control-empty');
     if (!container) return;
     container.innerHTML = '';
 
-    const rules = extensionSettings[EXT_NAME].rules;
-    if (rules.length === 0) {
-        const empty = document.createElement('div');
-        empty.className = 'tag-control-empty';
-        empty.textContent = 'No rules yet. Click "Add Rule" to create one.';
-        container.appendChild(empty);
-        return;
-    }
+    const rules = getSettings().rules;
+    if (empty) empty.style.display = rules.length === 0 ? '' : 'none';
+    if (rules.length === 0) return;
 
     for (const rule of rules) {
         const ext = MANAGED_EXTENSIONS[rule.extensionId];
-        const row = document.createElement('div');
-        row.className = 'tag-control-rule';
-        row.dataset.id = rule.id;
-
-        const handle = document.createElement('span');
-        handle.className = 'drag-handle menu-handle';
-        handle.innerHTML = '&#9776;';
-
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'tag-control-rule-name';
-        nameSpan.textContent = rule.name || '(unnamed)';
-
-        const extSpan = document.createElement('span');
-        extSpan.className = 'tag-control-rule-ext';
-        extSpan.textContent = ext?.displayName ?? rule.extensionId;
-
-        const editBtn = document.createElement('button');
-        editBtn.className = 'tag-control-edit-rule menu_button menu_button_icon interactable';
-        editBtn.title = 'Edit rule';
-        editBtn.tabIndex = 0;
-        editBtn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i>';
-        editBtn.addEventListener('click', () => openRuleEditor(rule.id));
-
-        const delBtn = document.createElement('button');
-        delBtn.className = 'tag-control-delete-rule menu_button menu_button_icon interactable';
-        delBtn.title = 'Delete rule';
-        delBtn.tabIndex = 0;
-        delBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
-        delBtn.addEventListener('click', () => deleteRule(rule.id));
-
-        row.appendChild(handle);
-        row.appendChild(nameSpan);
-        row.appendChild(extSpan);
-        row.appendChild(editBtn);
-        row.appendChild(delBtn);
-        container.appendChild(row);
+        const html = await renderExtensionTemplateAsync(EXT_PATH, 'rule-row', {
+            id: rule.id,
+            name: rule.name || t`(unnamed)`,
+            extName: ext?.displayName ?? rule.extensionId,
+        });
+        container.insertAdjacentHTML('beforeend', html);
     }
+}
+
+function bindDelegatedHandlers() {
+    const container = document.getElementById('tag-control-rules-list');
+    if (!container) return;
+    container.addEventListener('click', (event) => {
+        const row = event.target.closest('.tag-control-rule');
+        if (!row) return;
+        if (event.target.closest('.tag-control-edit-rule')) {
+            openRuleEditor(row.dataset.id);
+        } else if (event.target.closest('.tag-control-delete-rule')) {
+            deleteRule(row.dataset.id);
+        }
+    });
 }
 
 function initSortable() {
@@ -239,39 +219,52 @@ function initSortable() {
         delay: getSortableDelay(),
         handle: '.drag-handle',
         stop: function () {
-            const rules = extensionSettings[EXT_NAME].rules;
+            const rules = getSettings().rules;
             const newRules = [];
             $('#tag-control-rules-list').children('.tag-control-rule').each(function () {
                 const id = $(this).data('id');
                 const rule = rules.find(r => r.id === id);
                 if (rule) newRules.push(rule);
             });
-            extensionSettings[EXT_NAME].rules = newRules;
-            saveSettingsDebounced();
+            getSettings().rules = newRules;
+            SillyTavern.getContext().saveSettingsDebounced();
         },
     });
 }
 
 async function deleteRule(id) {
-    const rules = extensionSettings[EXT_NAME].rules;
+    const { t, Popup, POPUP_TYPE, POPUP_RESULT, saveSettingsDebounced } = SillyTavern.getContext();
+    const rules = getSettings().rules;
     const idx = rules.findIndex(r => r.id === id);
     if (idx === -1) return;
-    const confirmed = await callPopup(`Delete rule "${rules[idx].name || '(unnamed)'}"?`, 'confirm');
-    if (!confirmed) return;
+    const name = rules[idx].name || t`(unnamed)`;
+    const result = await new Popup(t`Delete rule "${name}"?`, POPUP_TYPE.CONFIRM).show();
+    if (result !== POPUP_RESULT.AFFIRMATIVE) return;
     rules.splice(idx, 1);
     saveSettingsDebounced();
-    renderRuleList();
+    await renderRuleList();
 }
 
 // --- Rule editor ---
 
 async function openRuleEditor(ruleId) {
-    const rules = extensionSettings[EXT_NAME].rules;
+    const {
+        t,
+        tags,
+        saveSettingsDebounced,
+        renderExtensionTemplateAsync,
+        uuidv4,
+        Popup,
+        POPUP_TYPE,
+        POPUP_RESULT,
+    } = SillyTavern.getContext();
+
+    const rules = getSettings().rules;
     const existingRule = ruleId ? rules.find(r => r.id === ruleId) : null;
 
     const installedExts = getInstalledManagedExtensions();
     if (installedExts.length === 0) {
-        toastr.warning('No supported managed extensions are installed.');
+        toastr.warning(t`No supported managed extensions are installed.`);
         return;
     }
 
@@ -287,7 +280,7 @@ async function openRuleEditor(ruleId) {
     // Populate tag options in both selects from the live tags array
     const whitelistSel = template.find('#rule-whitelist-select');
     const blacklistSel = template.find('#rule-blacklist-select');
-    for (const tag of context.tags) {
+    for (const tag of tags) {
         whitelistSel.append($('<option>').val(tag.id).text(tag.name));
         blacklistSel.append($('<option>').val(tag.id).text(tag.name));
     }
@@ -308,7 +301,7 @@ async function openRuleEditor(ruleId) {
     function updatePresetOptions(extId) {
         const prevVal = presetSel.val();
         presetSel.empty();
-        presetSel.append($('<option>').val('').text('— keep current —'));
+        presetSel.append($('<option>').val('').text(t`— keep current —`));
         const sets = MANAGED_EXTENSIONS[extId]?.getSets() ?? [];
         for (const name of sets) {
             presetSel.append($('<option>').val(name).text(name));
@@ -341,7 +334,7 @@ async function openRuleEditor(ruleId) {
     syncPresetEnabled();
     syncChatStyleVisibility(extSelect.val());
     syncEnabledVisibility(extSelect.val());
-    extSelect.on('change', function() {
+    extSelect.on('change', function () {
         updatePresetOptions($(this).val());
         syncChatStyleVisibility($(this).val());
         syncEnabledVisibility($(this).val());
@@ -357,7 +350,7 @@ async function openRuleEditor(ruleId) {
 
     // Show popup — Popup.show() appends the dialog to document.body synchronously
     // before returning the promise, so Select2 can be initialized right after.
-    const popup = new Popup(template[0], POPUP_TYPE.CONFIRM, '', { wide: true, okButton: 'Save' });
+    const popup = new Popup(template[0], POPUP_TYPE.CONFIRM, '', { wide: true, okButton: t`Save` });
     const popupPromise = popup.show();
 
     // Initialize Select2 now that the content is in the live DOM.
@@ -365,7 +358,7 @@ async function openRuleEditor(ruleId) {
     // top-layer context and isn't clipped by the modal backdrop.
     const s2Opts = {
         width: '100%',
-        placeholder: 'Select tags...',
+        placeholder: t`Select tags...`,
         allowClear: true,
         closeOnSelect: false,
         dropdownParent: $(popup.dlg),
@@ -411,33 +404,39 @@ async function openRuleEditor(ruleId) {
     }
 
     saveSettingsDebounced();
-    renderRuleList();
+    await renderRuleList();
 }
 
 // --- Init ---
 
-jQuery(async () => {
-    checkSettings();
+export async function init() {
+    ensureSettings();
+    const { eventSource, event_types, renderExtensionTemplateAsync } = SillyTavern.getContext();
 
     $('#extensions_settings2').append(await renderExtensionTemplateAsync(EXT_PATH, 'settings'));
 
     $('#tag-control-enabled')
-        .prop('checked', extensionSettings[EXT_NAME].is_enabled)
+        .prop('checked', getSettings().is_enabled)
         .on('click', function () {
-            extensionSettings[EXT_NAME].is_enabled = $(this).prop('checked');
-            saveSettingsDebounced();
+            getSettings().is_enabled = $(this).prop('checked');
+            SillyTavern.getContext().saveSettingsDebounced();
         });
 
     $('#tag-control-add-rule').on('click', () => openRuleEditor(null));
     $('#tag-control-reapply-rules').on('click', () => {
-        _applyRulesHasRun = false;
+        applyRulesHasRun = false;
         applyRules();
     });
 
-    renderRuleList();
+    await renderRuleList();
+    bindDelegatedHandlers();
     initSortable();
 
     eventSource.makeLast(event_types.CHAT_CHANGED, applyRules);
 
     await applyRules();
+}
+
+jQuery(async () => {
+    await init();
 });

@@ -1,3 +1,5 @@
 /.idea
 /.claude
 *.iml
+.DS_Store
+CLAUDE.md
